@@ -33,7 +33,9 @@ EOF
 }
 
 # ── .env helpers ───────────────────────────────────────────────────────────
-env_get() { [[ -f "$ENV_FILE" ]] && grep -E "^$1=" "$ENV_FILE" | tail -1 | cut -d= -f2- || true; }
+env_get() {
+  if [[ -f "$ENV_FILE" ]]; then grep -E "^$1=" "$ENV_FILE" | tail -1 | cut -d= -f2- || true; fi
+}
 
 rand_hex() { openssl rand -hex 16 2>/dev/null || od -An -N16 -tx1 /dev/urandom | tr -d ' \n'; }
 rand_pw()  { LC_ALL=C tr -dc 'A-Za-z0-9' </dev/urandom | head -c 20 || true; }

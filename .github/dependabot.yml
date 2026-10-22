@@ -3,18 +3,26 @@ updates:
   - package-ecosystem: github-actions
     directory: /
     schedule: { interval: weekly }
+    cooldown: { default-days: 7 }  # let fresh releases age before we adopt them
     groups:
       actions: { patterns: ["*"] }
     commit-message: { prefix: ci }
   - package-ecosystem: docker
     directory: /core
     schedule: { interval: weekly }
+    cooldown: { default-days: 7 }  # let fresh releases age before we adopt them
     commit-message: { prefix: chore }
   - package-ecosystem: pip
     directory: /core
     schedule: { interval: weekly }
+    cooldown: { default-days: 7 }  # let fresh releases age before we adopt them
     commit-message: { prefix: chore }
   - package-ecosystem: docker-compose
     directory: /
     schedule: { interval: weekly }
+    cooldown: { default-days: 7 }  # let fresh releases age before we adopt them
     commit-message: { prefix: chore }
+    ignore:
+      # gluetun also publishes numeric build tags (e.g. "1243"): only follow semver releases
+      - dependency-name: qmcgaw/gluetun
+        versions: [">= 100"]
