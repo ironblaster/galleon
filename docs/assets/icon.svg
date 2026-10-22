@@ -1,0 +1,49 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 512 512" width="512" height="512" role="img" aria-label="Galleon">
+  <defs>
+    <linearGradient id="sea" x1="0" y1="0" x2="0" y2="1">
+      <stop offset="0" stop-color="#14325E"/>
+      <stop offset="1" stop-color="#08162E"/>
+    </linearGradient>
+    <linearGradient id="sail" x1="0" y1="0" x2="0" y2="1">
+      <stop offset="0" stop-color="#FFF7E6"/>
+      <stop offset="1" stop-color="#F2D7A0"/>
+    </linearGradient>
+    <linearGradient id="hull" x1="0" y1="0" x2="0" y2="1">
+      <stop offset="0" stop-color="#F7B946"/>
+      <stop offset="1" stop-color="#C9781E"/>
+    </linearGradient>
+    <radialGradient id="glow" cx="0.5" cy="0.32" r="0.6">
+      <stop offset="0" stop-color="#2EC4B6" stop-opacity="0.28"/>
+      <stop offset="1" stop-color="#2EC4B6" stop-opacity="0"/>
+    </radialGradient>
+    <clipPath id="tile"><rect width="512" height="512" rx="116"/></clipPath>
+  </defs>
+
+  <g clip-path="url(#tile)">
+    <rect width="512" height="512" fill="url(#sea)"/>
+    <rect width="512" height="512" fill="url(#glow)"/>
+
+    <!-- mast & pennant -->
+    <rect x="246" y="78" width="9" height="262" rx="4.5" fill="#F2D7A0"/>
+    <path d="M254 80 L306 94 L254 108 Z" fill="#2EC4B6"/>
+
+    <!-- sails: the fleet of services, rigged together -->
+    <path d="M178 120 L322 120 Q346 176 332 232 L168 232 Q154 176 178 120 Z" fill="url(#sail)"/>
+    <path d="M164 248 L336 248 Q360 284 346 322 L154 322 Q140 284 164 248 Z" fill="url(#sail)"/>
+    <path d="M348 128 Q394 214 420 322 L348 322 Z" fill="url(#sail)" opacity="0.92"/>
+
+    <!-- play mark: it's a media ship -->
+    <path d="M232 154 L276 176 L232 198 Z" fill="#14325E"/>
+
+    <!-- hull -->
+    <path d="M84 338 L428 338 Q410 410 336 418 L176 418 Q102 410 84 338 Z" fill="url(#hull)"/>
+    <rect x="84" y="336" width="344" height="10" rx="5" fill="#FFD27A"/>
+    <circle cx="190" cy="372" r="9" fill="#7A3E0C"/>
+    <circle cx="256" cy="372" r="9" fill="#7A3E0C"/>
+    <circle cx="322" cy="372" r="9" fill="#7A3E0C"/>
+
+    <!-- sea -->
+    <path d="M20 440 q34 -20 68 0 t68 0 t68 0 t68 0 t68 0 t68 0 t68 0" fill="none" stroke="#2EC4B6" stroke-width="14" stroke-linecap="round"/>
+    <path d="M-14 478 q34 -20 68 0 t68 0 t68 0 t68 0 t68 0 t68 0 t68 0 t68 0" fill="none" stroke="#2EC4B6" stroke-width="12" stroke-linecap="round" opacity="0.45"/>
+  </g>
+</svg>

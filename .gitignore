@@ -1,0 +1,6 @@
+.env
+config/
+data/
+*.pyc
+__pycache__/
+.ruff_cache/

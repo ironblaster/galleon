@@ -1,0 +1,11 @@
+# Galleon preset · private-it
+# Italian (semi-)private trackers. Each one is added only when its credentials exist in .env —
+# the values below are placeholders, never put real credentials in this file.
+name: private-it
+description: Italian private/semi-private trackers (bring your own account)
+indexers:
+  - definition: ilcorsaroblu
+    flaresolverr: true
+    settings:
+      username: ${GALLEON_IDX_ILCORSAROBLU_USERNAME}
+      password: ${GALLEON_IDX_ILCORSAROBLU_PASSWORD}

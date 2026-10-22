@@ -1,0 +1,21 @@
+# Galleon preset · public-general
+# Popular public trackers for movies and TV. Opt-in only: check that using them is legal where you live.
+# Definitions: https://github.com/Prowlarr/Indexers
+name: public-general
+description: Well-known public trackers for movies & series
+indexers:
+  - definition: 1337x
+    flaresolverr: true
+  - definition: thepiratebay
+  - definition: yts
+  - definition: eztv
+    flaresolverr: true
+  - definition: limetorrents
+  - definition: kickasstorrents-ws
+    flaresolverr: true
+  - definition: uindex
+    flaresolverr: true
+  - definition: torrentdownloads
+    priority: 30
+  - definition: knaben
+    priority: 30

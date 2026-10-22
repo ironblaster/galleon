@@ -1,0 +1,204 @@
+# ⛵ Galleon — the self-assembling media stack
+# Don't edit values here: everything is driven by .env (run `./galleon init`).
+name: galleon
+
+x-arr: &arr
+  restart: unless-stopped
+  networks: [fleet]
+  depends_on:
+    galleon-seed:
+      condition: service_completed_successfully
+  environment: &lsio-env
+    PUID: ${PUID:-1000}
+    PGID: ${PGID:-1000}
+    UMASK: ${UMASK:-002}
+    TZ: ${TZ:-Etc/UTC}
+
+x-galleon: &galleon
+  image: ghcr.io/ironblaster/galleon:${GALLEON_VERSION:-latest}
+  build: ./core
+  env_file: .env
+  networks: [fleet]
+  volumes:
+    - ${GALLEON_CONFIG_DIR:-./config}:/config-root
+    - ${GALLEON_DATA_DIR:-./data}:/data
+    - ./presets:/presets:ro
+
+services:
+  # ── Crew: one-shot helpers ────────────────────────────────────────────────
+  galleon-seed:
+    <<: *galleon
+    container_name: galleon-seed
+    command: ["seed"]
+    restart: "no"
+    user: "0:0"  # needs root once, to chown freshly created folders to PUID:PGID
+
+  galleon:
+    <<: *galleon
+    container_name: galleon
+    command: ["bootstrap"]
+    restart: "no"
+    user: ${PUID:-1000}:${PGID:-1000}
+    environment:
+      GALLEON_QBIT_HOST: qbittorrent
+    depends_on:
+      galleon-seed: { condition: service_completed_successfully }
+      qbittorrent: { condition: service_started }
+      radarr: { condition: service_started }
+      sonarr: { condition: service_started }
+      prowlarr: { condition: service_started }
+      flaresolverr: { condition: service_started }
+      jellyfin: { condition: service_started }
+      seerr: { condition: service_started }
+
+  # ── Download ──────────────────────────────────────────────────────────────
+  qbittorrent:
+    <<: *arr
+    image: lscr.io/linuxserver/qbittorrent:latest
+    container_name: qbittorrent
+    environment:
+      <<: *lsio-env
+      WEBUI_PORT: "8080"
+      TORRENTING_PORT: ${GALLEON_TORRENT_PORT:-6881}
+    ports:
+      - ${GALLEON_PORT_QBITTORRENT:-8080}:8080
+      - ${GALLEON_TORRENT_PORT:-6881}:${GALLEON_TORRENT_PORT:-6881}
+      - ${GALLEON_TORRENT_PORT:-6881}:${GALLEON_TORRENT_PORT:-6881}/udp
+    volumes:
+      - ${GALLEON_CONFIG_DIR:-./config}/qbittorrent:/config
+      - ${GALLEON_DATA_DIR:-./data}:/data
+
+  unpackerr:
+    image: golift/unpackerr:latest
+    container_name: unpackerr
+    restart: unless-stopped
+    networks: [fleet]
+    user: ${PUID:-1000}:${PGID:-1000}
+    depends_on:
+      galleon-seed: { condition: service_completed_successfully }
+    environment:
+      TZ: ${TZ:-Etc/UTC}
+      UN_LOG_FILE: /config/unpackerr.log
+      UN_INTERVAL: 2m
+      UN_START_DELAY: 1m
+      UN_FILE_MODE: "0664"
+      UN_DIR_MODE: "0775"
+      UN_RADARR_0_URL: http://radarr:7878
+      UN_RADARR_0_API_KEY: ${RADARR_API_KEY}
+      UN_RADARR_0_PATHS_0: /data/torrents/movies
+      UN_RADARR_0_PROTOCOLS: torrent
+      UN_SONARR_0_URL: http://sonarr:8989
+      UN_SONARR_0_API_KEY: ${SONARR_API_KEY}
+      UN_SONARR_0_PATHS_0: /data/torrents/tv
+      UN_SONARR_0_PROTOCOLS: torrent
+    volumes:
+      - ${GALLEON_CONFIG_DIR:-./config}/unpackerr:/config
+      - ${GALLEON_DATA_DIR:-./data}:/data
+
+  # ── Automation ────────────────────────────────────────────────────────────
+  radarr:
+    <<: *arr
+    image: lscr.io/linuxserver/radarr:latest
+    container_name: radarr
+    environment:
+      <<: *lsio-env
+      RADARR__AUTH__APIKEY: ${RADARR_API_KEY}
+    ports: ["${GALLEON_PORT_RADARR:-7878}:7878"]
+    healthcheck: &arr-health
+      test: ["CMD", "curl", "-fsS", "http://localhost:7878/ping"]
+      interval: 30s
+      timeout: 5s
+      start_period: 60s
+    volumes:
+      - ${GALLEON_CONFIG_DIR:-./config}/radarr:/config
+      - ${GALLEON_DATA_DIR:-./data}:/data
+
+  sonarr:
+    <<: *arr
+    image: lscr.io/linuxserver/sonarr:latest
+    container_name: sonarr
+    environment:
+      <<: *lsio-env
+      SONARR__AUTH__APIKEY: ${SONARR_API_KEY}
+    ports: ["${GALLEON_PORT_SONARR:-8989}:8989"]
+    healthcheck:
+      <<: *arr-health
+      test: ["CMD", "curl", "-fsS", "http://localhost:8989/ping"]
+    volumes:
+      - ${GALLEON_CONFIG_DIR:-./config}/sonarr:/config
+      - ${GALLEON_DATA_DIR:-./data}:/data
+
+  prowlarr:
+    <<: *arr
+    image: lscr.io/linuxserver/prowlarr:latest
+    container_name: prowlarr
+    environment:
+      <<: *lsio-env
+      PROWLARR__AUTH__APIKEY: ${PROWLARR_API_KEY}
+    ports: ["${GALLEON_PORT_PROWLARR:-9696}:9696"]
+    healthcheck:
+      <<: *arr-health
+      test: ["CMD", "curl", "-fsS", "http://localhost:9696/ping"]
+    volumes:
+      - ${GALLEON_CONFIG_DIR:-./config}/prowlarr:/config
+
+  flaresolverr:
+    image: ghcr.io/flaresolverr/flaresolverr:latest
+    container_name: flaresolverr
+    restart: unless-stopped
+    networks: [fleet]
+    environment:
+      LOG_LEVEL: info
+      TZ: ${TZ:-Etc/UTC}
+
+  # ── Watch & request ───────────────────────────────────────────────────────
+  jellyfin:
+    <<: *arr
+    image: jellyfin/jellyfin:latest
+    container_name: jellyfin
+    user: ${PUID:-1000}:${PGID:-1000}
+    environment:
+      TZ: ${TZ:-Etc/UTC}
+      JELLYFIN_PublishedServerUrl: http://${GALLEON_HOST:-localhost}:${GALLEON_PORT_JELLYFIN:-8096}
+    ports:
+      - ${GALLEON_PORT_JELLYFIN:-8096}:8096
+      - 7359:7359/udp
+    volumes:
+      - ${GALLEON_CONFIG_DIR:-./config}/jellyfin/config:/config
+      - ${GALLEON_CONFIG_DIR:-./config}/jellyfin/cache:/cache
+      - ${GALLEON_DATA_DIR:-./data}/media:/data/media
+
+  seerr:
+    <<: *arr
+    image: ghcr.io/seerr-team/seerr:latest
+    container_name: seerr
+    init: true
+    user: ${PUID:-1000}:${PGID:-1000}
+    environment:
+      TZ: ${TZ:-Etc/UTC}
+      LOG_LEVEL: info
+    ports: ["${GALLEON_PORT_SEERR:-5055}:5055"]
+    volumes:
+      - ${GALLEON_CONFIG_DIR:-./config}/seerr:/app/config
+
+  # ── Optional: TRaSH-guides quality profiles (profile "trash") ─────────────
+  recyclarr:
+    image: ghcr.io/recyclarr/recyclarr:7
+    container_name: recyclarr
+    profiles: [trash]
+    restart: unless-stopped
+    networks: [fleet]
+    user: ${PUID:-1000}:${PGID:-1000}
+    depends_on:
+      galleon-seed: { condition: service_completed_successfully }
+    environment:
+      TZ: ${TZ:-Etc/UTC}
+      CRON_SCHEDULE: "@daily"
+      RADARR_API_KEY: ${RADARR_API_KEY}
+      SONARR_API_KEY: ${SONARR_API_KEY}
+    volumes:
+      - ${GALLEON_CONFIG_DIR:-./config}/recyclarr:/config
+
+networks:
+  fleet:
+    name: galleon-fleet

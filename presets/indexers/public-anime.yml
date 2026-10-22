@@ -1,0 +1,13 @@
+# Galleon preset · public-anime
+# Anime-focused public trackers. Works great with Sonarr's "anime" series type.
+name: public-anime
+description: Public anime trackers
+indexers:
+  - definition: nyaasi
+    settings:
+      sonarr_compatibility: true
+      radarr_compatibility: true
+  - definition: tokyotosho
+    priority: 30
+  - definition: animetosho-xyz
+  - definition: subsplease

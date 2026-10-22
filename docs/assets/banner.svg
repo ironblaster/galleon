@@ -1,0 +1,68 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 1280 640" width="1280" height="640" role="img" aria-label="Galleon — the self-assembling media stack">
+  <defs>
+    <linearGradient id="bg" x1="0" y1="0" x2="1" y2="1">
+      <stop offset="0" stop-color="#14325E"/>
+      <stop offset="1" stop-color="#060F22"/>
+    </linearGradient>
+    <radialGradient id="glow" cx="0.22" cy="0.4" r="0.5">
+      <stop offset="0" stop-color="#2EC4B6" stop-opacity="0.22"/>
+      <stop offset="1" stop-color="#2EC4B6" stop-opacity="0"/>
+    </radialGradient>
+    <linearGradient id="sail" x1="0" y1="0" x2="0" y2="1">
+      <stop offset="0" stop-color="#FFF7E6"/>
+      <stop offset="1" stop-color="#F2D7A0"/>
+    </linearGradient>
+    <linearGradient id="hull" x1="0" y1="0" x2="0" y2="1">
+      <stop offset="0" stop-color="#F7B946"/>
+      <stop offset="1" stop-color="#C9781E"/>
+    </linearGradient>
+    <style>
+      .word { font: 800 112px "Inter", "SF Pro Display", "Segoe UI", system-ui, sans-serif; letter-spacing: -3px; fill: #FFF7E6; }
+      .tag  { font: 500 34px "Inter", "SF Pro Text", "Segoe UI", system-ui, sans-serif; fill: #9FB6D6; }
+      .chip { font: 600 21px "Inter", "SF Pro Text", "Segoe UI", system-ui, sans-serif; fill: #DCE7F5; }
+      .cmd  { font: 600 26px "JetBrains Mono", "SF Mono", Menlo, Consolas, monospace; fill: #2EC4B6; }
+    </style>
+  </defs>
+
+  <rect width="1280" height="640" fill="url(#bg)"/>
+  <rect width="1280" height="640" fill="url(#glow)"/>
+
+  <!-- ship (same geometry as icon.svg, scaled) -->
+  <g transform="translate(70 92) scale(0.86)">
+    <rect x="246" y="78" width="9" height="262" rx="4.5" fill="#F2D7A0"/>
+    <path d="M254 80 L306 94 L254 108 Z" fill="#2EC4B6"/>
+    <path d="M178 120 L322 120 Q346 176 332 232 L168 232 Q154 176 178 120 Z" fill="url(#sail)"/>
+    <path d="M164 248 L336 248 Q360 284 346 322 L154 322 Q140 284 164 248 Z" fill="url(#sail)"/>
+    <path d="M348 128 Q394 214 420 322 L348 322 Z" fill="url(#sail)" opacity="0.92"/>
+    <path d="M232 154 L276 176 L232 198 Z" fill="#14325E"/>
+    <path d="M84 338 L428 338 Q410 410 336 418 L176 418 Q102 410 84 338 Z" fill="url(#hull)"/>
+    <rect x="84" y="336" width="344" height="10" rx="5" fill="#FFD27A"/>
+    <circle cx="190" cy="372" r="9" fill="#7A3E0C"/>
+    <circle cx="256" cy="372" r="9" fill="#7A3E0C"/>
+    <circle cx="322" cy="372" r="9" fill="#7A3E0C"/>
+  </g>
+
+  <!-- sea across the whole banner -->
+  <path d="M-20 520 q40 -22 80 0 t80 0 t80 0 t80 0 t80 0 t80 0 t80 0 t80 0 t80 0 t80 0 t80 0 t80 0 t80 0 t80 0 t80 0 t80 0 t80 0" fill="none" stroke="#2EC4B6" stroke-width="12" stroke-linecap="round"/>
+  <path d="M-60 566 q40 -22 80 0 t80 0 t80 0 t80 0 t80 0 t80 0 t80 0 t80 0 t80 0 t80 0 t80 0 t80 0 t80 0 t80 0 t80 0 t80 0 t80 0 t80 0" fill="none" stroke="#2EC4B6" stroke-width="10" stroke-linecap="round" opacity="0.4"/>
+
+  <!-- wordmark -->
+  <text x="548" y="236" class="word">Galleon</text>
+  <text x="552" y="292" class="tag">The self-assembling media stack.</text>
+  <text x="552" y="336" class="tag">Eight services. One command. Zero clicks.</text>
+
+  <!-- crew chips -->
+  <g transform="translate(552 372)">
+    <g><rect width="104" height="40" rx="20" fill="#FFFFFF" fill-opacity="0.08" stroke="#FFFFFF" stroke-opacity="0.16"/><text x="52" y="27" text-anchor="middle" class="chip">Radarr</text></g>
+    <g transform="translate(114 0)"><rect width="108" height="40" rx="20" fill="#FFFFFF" fill-opacity="0.08" stroke="#FFFFFF" stroke-opacity="0.16"/><text x="54" y="27" text-anchor="middle" class="chip">Sonarr</text></g>
+    <g transform="translate(232 0)"><rect width="120" height="40" rx="20" fill="#FFFFFF" fill-opacity="0.08" stroke="#FFFFFF" stroke-opacity="0.16"/><text x="60" y="27" text-anchor="middle" class="chip">Prowlarr</text></g>
+    <g transform="translate(362 0)"><rect width="140" height="40" rx="20" fill="#FFFFFF" fill-opacity="0.08" stroke="#FFFFFF" stroke-opacity="0.16"/><text x="70" y="27" text-anchor="middle" class="chip">qBittorrent</text></g>
+    <g transform="translate(0 50)"><rect width="112" height="40" rx="20" fill="#FFFFFF" fill-opacity="0.08" stroke="#FFFFFF" stroke-opacity="0.16"/><text x="56" y="27" text-anchor="middle" class="chip">Jellyfin</text></g>
+    <g transform="translate(122 50)"><rect width="96" height="40" rx="20" fill="#FFFFFF" fill-opacity="0.08" stroke="#FFFFFF" stroke-opacity="0.16"/><text x="48" y="27" text-anchor="middle" class="chip">Seerr</text></g>
+    <g transform="translate(228 50)"><rect width="134" height="40" rx="20" fill="#FFFFFF" fill-opacity="0.08" stroke="#FFFFFF" stroke-opacity="0.16"/><text x="67" y="27" text-anchor="middle" class="chip">Unpackerr</text></g>
+    <g transform="translate(372 50)"><rect width="150" height="40" rx="20" fill="#FFFFFF" fill-opacity="0.08" stroke="#FFFFFF" stroke-opacity="0.16"/><text x="75" y="27" text-anchor="middle" class="chip">FlareSolverr</text></g>
+  </g>
+
+  <!-- command -->
+  <text x="1210" y="612" text-anchor="end" class="cmd">$ ./galleon up</text>
+</svg>

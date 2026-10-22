@@ -1,0 +1,302 @@
+#!/usr/bin/env bash
+# ⛵ Galleon — the self-assembling media stack
+# https://github.com/ironblaster/galleon
+set -euo pipefail
+
+VERSION="0.1.0"
+ROOT="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
+ENV_FILE="$ROOT/.env"
+cd "$ROOT"
+
+# ── look & feel ────────────────────────────────────────────────────────────
+if [[ -t 1 ]]; then
+  B=$'\033[1m'; DIM=$'\033[90m'; CYAN=$'\033[36m'; GREEN=$'\033[32m'; YELLOW=$'\033[33m'; RED=$'\033[31m'; R=$'\033[0m'
+else
+  B=""; DIM=""; CYAN=""; GREEN=""; YELLOW=""; RED=""; R=""
+fi
+say()  { printf '%s\n' "$*"; }
+ok()   { printf '  %s✔%s %s\n' "$GREEN" "$R" "$*"; }
+warn() { printf '  %s⚠%s %s\n' "$YELLOW" "$R" "$*"; }
+die()  { printf '  %s✖%s %s\n' "$RED" "$R" "$*" >&2; exit 1; }
+
+logo() {
+  cat <<EOF
+${CYAN}${B}
+            |    |    |
+           )_)  )_)  )_)        G A L L E O N
+          )___))___))___)\\      the self-assembling media stack
+         )____)____)_____)\\\\    ${R}${DIM}v${VERSION}${CYAN}${B}
+       _____|____|____|____\\\\\\__
+  ~~~~~\\                   /~~~~~
+${R}
+EOF
+}
+
+# ── .env helpers ───────────────────────────────────────────────────────────
+env_get() { [[ -f "$ENV_FILE" ]] && grep -E "^$1=" "$ENV_FILE" | tail -1 | cut -d= -f2- || true; }
+
+rand_hex() { openssl rand -hex 16 2>/dev/null || od -An -N16 -tx1 /dev/urandom | tr -d ' \n'; }
+rand_pw()  { LC_ALL=C tr -dc 'A-Za-z0-9' </dev/urandom | head -c 20 || true; }
+
+ask() { # ask VAR "Question" default
+  local __var=$1 q=$2 def=${3:-} ans
+  if [[ ${GALLEON_YES:-0} == 1 ]]; then printf -v "$__var" '%s' "$def"; return; fi
+  read -r -p "  ${B}?${R} $q ${DIM}[$def]${R} " ans || true
+  printf -v "$__var" '%s' "${ans:-$def}"
+}
+
+yesno() { # yesno "Question" y|n  → returns 0 for yes
+  local ans def=$2
+  if [[ ${GALLEON_YES:-0} == 1 ]]; then [[ $def == y ]]; return; fi
+  read -r -p "  ${B}?${R} $1 ${DIM}[$( [[ $def == y ]] && echo Y/n || echo y/N )]${R} " ans || true
+  ans=${ans:-$def}; [[ $ans =~ ^[Yy] ]]
+}
+
+detect_tz() {
+  if [[ -n ${TZ:-} ]]; then echo "$TZ"; return; fi
+  if [[ -f /etc/timezone ]]; then cat /etc/timezone; return; fi
+  local l; l=$(readlink /etc/localtime 2>/dev/null || true)
+  [[ $l == *zoneinfo/* ]] && echo "${l##*zoneinfo/}" || echo "Etc/UTC"
+}
+
+detect_ip() {
+  local ip=""
+  if command -v ip >/dev/null; then ip=$(ip route get 1.1.1.1 2>/dev/null | awk '{for(i=1;i<=NF;i++) if($i=="src") print $(i+1)}' | head -1); fi
+  [[ -z $ip ]] && command -v ipconfig >/dev/null && ip=$(ipconfig getifaddr en0 2>/dev/null || true)
+  echo "${ip:-localhost}"
+}
+
+detect_lang() {
+  local l=${LANG:-en}; l=${l%%_*}; l=${l%%.*}
+  case $l in en|it|de|fr|es|pt|nl|pl) echo "$l" ;; *) echo en ;; esac
+}
+
+# ── compose wrapper ────────────────────────────────────────────────────────
+compose() {
+  command -v docker >/dev/null || die "Docker is not installed: https://docs.docker.com/get-docker/"
+  docker compose version >/dev/null 2>&1 || die "Docker Compose v2 is required (docker compose …)"
+  local files=(-f compose.yaml)
+  [[ $(env_get GALLEON_VPN) == true ]] && files+=(-f compose.vpn.yaml)
+  [[ $(env_get GALLEON_GPU) == true ]] && files+=(-f compose.gpu.yaml)
+  local profiles=()
+  [[ $(env_get GALLEON_TRASH) == true ]] && profiles+=(--profile trash)
+  docker compose --env-file "$ENV_FILE" "${files[@]}" ${profiles[@]+"${profiles[@]}"} "$@"
+}
+
+require_env() { [[ -f "$ENV_FILE" ]] || die "No .env yet: run ${B}./galleon init${R} first"; }
+
+# ── commands ───────────────────────────────────────────────────────────────
+cmd_init() {
+  local force=0
+  for a in "$@"; do case $a in --yes|-y) GALLEON_YES=1 ;; --force) force=1 ;; esac; done
+  logo
+  if [[ -f "$ENV_FILE" && $force == 0 ]]; then
+    die ".env already exists. Use ${B}./galleon init --force${R} to start over (keys and password will change)."
+  fi
+
+  say "${B}Let's rig your ship.${R} ${DIM}Press enter to accept the defaults.${R}"; say ""
+  local data config tz puid pgid user lang host presets="" vpn=false gpu=false trash=false
+  ask data   "Where should media & downloads live?" "./data"
+  ask config "Where should app configs live?"        "./config"
+  ask tz     "Timezone"                               "$(detect_tz)"
+  ask puid   "Run as user id (PUID)"                  "$(id -u)"
+  ask pgid   "Run as group id (PGID)"                 "$(id -g)"
+  ask user   "Admin username for every service"       "admin"
+  ask lang   "Language (en it de fr es pt nl pl)"     "$(detect_lang)"
+  ask host   "Address of this machine on your LAN"    "$(detect_ip)"
+
+  say ""
+  say "  ${B}Indexer presets${R} ${DIM}(what Prowlarr searches — you can change this later)${R}"
+  say "    ${DIM}public-general  · public movie/TV trackers"
+  say "    public-anime    · public anime trackers"
+  say "    private-it      · Italian private trackers (credentials in .env)"
+  say "    custom          · your own, from ./galleon export-indexers${R}"
+  warn "Public trackers may distribute copyrighted content. Only enable what is legal where you live."
+  ask presets "Presets, comma-separated (empty = none)" ""
+
+  say ""
+  yesno "Route qBittorrent through a VPN (Gluetun)?" n && vpn=true
+  if [[ -e /dev/dri ]]; then yesno "GPU found at /dev/dri — enable Jellyfin hardware transcoding?" y && gpu=true; fi
+  yesno "Keep quality profiles synced with the TRaSH Guides (Recyclarr)?" n && trash=true
+
+  local pw; pw=$(rand_pw)
+  umask 077
+  cat > "$ENV_FILE" <<EOF
+# ⛵ Galleon — generated by ./galleon init on $(date +%Y-%m-%d). Keep this file private.
+
+# ── Paths & identity ──────────────────────────────────────────────
+GALLEON_DATA_DIR=$data
+GALLEON_CONFIG_DIR=$config
+GALLEON_HOST=$host
+PUID=$puid
+PGID=$pgid
+UMASK=002
+TZ=$tz
+
+# ── One login for the whole fleet ─────────────────────────────────
+GALLEON_ADMIN_USER=$user
+GALLEON_ADMIN_PASSWORD=$pw
+GALLEON_ADMIN_EMAIL=$user@galleon.local
+
+# ── Inter-service API keys (pre-seeded, never typed by hand) ──────
+RADARR_API_KEY=$(rand_hex)
+SONARR_API_KEY=$(rand_hex)
+PROWLARR_API_KEY=$(rand_hex)
+
+# ── Behaviour ─────────────────────────────────────────────────────
+GALLEON_LANGUAGE=$lang
+GALLEON_INDEXER_PRESETS=$presets
+GALLEON_QUALITY_PROFILE=HD-1080p
+GALLEON_ALLOWED_HOSTS=
+GALLEON_TRASH=$trash
+GALLEON_GPU=$gpu
+GALLEON_VPN=$vpn
+
+# ── Ports ─────────────────────────────────────────────────────────
+GALLEON_PORT_SEERR=5055
+GALLEON_PORT_JELLYFIN=8096
+GALLEON_PORT_RADARR=7878
+GALLEON_PORT_SONARR=8989
+GALLEON_PORT_PROWLARR=9696
+GALLEON_PORT_QBITTORRENT=8080
+GALLEON_TORRENT_PORT=6881
+
+# ── VPN (only used when GALLEON_VPN=true) — see docs/configuration.md
+VPN_SERVICE_PROVIDER=
+VPN_TYPE=wireguard
+WIREGUARD_PRIVATE_KEY=
+WIREGUARD_ADDRESSES=
+VPN_SERVER_COUNTRIES=
+
+# ── Private tracker credentials referenced by presets (GALLEON_IDX_*)
+EOF
+  umask 022
+  mkdir -p "$data" "$config"
+  say ""
+  ok ".env written (chmod 600) with fresh API keys and a random admin password"
+  [[ $vpn == true ]] && warn "Fill the VPN_* values in .env before ${B}./galleon up${R}"
+  say ""
+  say "  Next: ${B}./galleon up${R}"
+}
+
+cmd_up() {
+  require_env
+  logo
+  if [[ $(env_get GALLEON_VPN) == true && -z $(env_get VPN_SERVICE_PROVIDER) ]]; then
+    die "GALLEON_VPN=true but VPN_SERVICE_PROVIDER is empty in .env"
+  fi
+  say "${B}Hoisting the sails…${R} ${DIM}(first run pulls ~3 GB of images)${R}"
+  compose up -d --build --remove-orphans
+  say ""
+  docker logs galleon-seed 2>&1 || true
+  follow_helm
+}
+
+# The helmsman is a one-shot service: (re)create exactly one instance and stream it to the end.
+follow_helm() {
+  docker logs -f galleon 2>&1 || true
+  local code; code=$(docker inspect galleon --format '{{.State.ExitCode}}' 2>/dev/null || echo 1)
+  [[ $code == 0 ]] || die "Bootstrap reported problems (see above). Fix and run ${B}./galleon bootstrap${R}"
+}
+
+cmd_bootstrap() { require_env; compose up -d --build --force-recreate galleon; follow_helm; }
+cmd_down()      { require_env; compose down "$@"; }
+cmd_restart()   { require_env; compose restart "$@"; }
+cmd_status()    { require_env; compose ps --format 'table {{.Name}}\t{{.State}}\t{{.Status}}\t{{.Ports}}'; }
+cmd_logs()      { require_env; compose logs -f --tail 100 "$@"; }
+
+cmd_update() {
+  require_env
+  compose pull --ignore-buildable
+  compose build --pull galleon
+  compose up -d --remove-orphans
+  ok "fleet updated"
+}
+
+cmd_urls() {
+  require_env
+  local h; h=$(env_get GALLEON_HOST)
+  say ""
+  printf '    %-20s http://%s:%s\n' "Seerr (start here)" "$h" "$(env_get GALLEON_PORT_SEERR)" \
+    "Jellyfin" "$h" "$(env_get GALLEON_PORT_JELLYFIN)" "Radarr" "$h" "$(env_get GALLEON_PORT_RADARR)" \
+    "Sonarr" "$h" "$(env_get GALLEON_PORT_SONARR)" "Prowlarr" "$h" "$(env_get GALLEON_PORT_PROWLARR)" \
+    "qBittorrent" "$h" "$(env_get GALLEON_PORT_QBITTORRENT)"
+  say ""
+  say "    login: $(env_get GALLEON_ADMIN_USER) / $(env_get GALLEON_ADMIN_PASSWORD)"
+  say ""
+}
+
+cmd_export_indexers() {
+  require_env
+  [[ $# -gt 0 ]] || die "usage: ./galleon export-indexers --url http://old-host:9696 --api-key <key>"
+  compose run --rm --no-deps galleon export "$@"
+}
+
+cmd_doctor() {
+  logo
+  local fail=0
+  if command -v docker >/dev/null; then
+    ok "docker $(docker version --format '{{.Server.Version}}' 2>/dev/null || echo '(daemon not running!)')"
+  else warn "docker missing"; fail=1; fi
+  if docker compose version >/dev/null 2>&1; then ok "compose $(docker compose version --short)"
+  else warn "docker compose v2 missing"; fail=1; fi
+  if [[ -f "$ENV_FILE" ]]; then
+    ok ".env present"
+    local data; data=$(env_get GALLEON_DATA_DIR)
+    if [[ -d $data ]]; then
+      ok "data dir $data ($(df -h "$data" | awk 'NR==2{print $4" free"}'))"
+      if touch "$data/.probe" 2>/dev/null && mkdir -p "$data/media" && ln "$data/.probe" "$data/media/.probe" 2>/dev/null; then
+        ok "hardlinks work inside $data"
+      else
+        warn "hardlinks fail inside $data: imports will be slow copies"
+      fi
+      rm -f "$data/.probe" "$data/media/.probe"
+    fi
+    for p in SEERR JELLYFIN RADARR SONARR PROWLARR QBITTORRENT; do
+      local port; port=$(env_get "GALLEON_PORT_$p")
+      if ! docker ps --format '{{.Ports}}' 2>/dev/null | grep -q ":$port->" && (exec 3<>"/dev/tcp/127.0.0.1/$port") 2>/dev/null; then
+        warn "port $port ($p) is already used by something else"; fail=1
+      fi
+    done
+  else
+    warn "no .env: run ./galleon init"; fail=1
+  fi
+  if [[ $fail == 0 ]]; then ok "shipshape"; else die "fix the warnings above"; fi
+}
+
+cmd_help() {
+  logo
+  cat <<EOF
+  ${B}Usage${R}  ./galleon <command>
+
+  ${B}init${R} [--yes] [--force]   interactive setup, writes .env
+  ${B}up${R}                       start everything and auto-configure it
+  ${B}urls${R}                     where is everything + login
+  ${B}status${R}                   container health
+  ${B}logs${R} [service]           follow logs
+  ${B}bootstrap${R}                re-run auto-configuration (idempotent)
+  ${B}export-indexers${R} --url U --api-key K
+                           copy indexers from an existing Prowlarr (secrets stripped)
+  ${B}update${R}                   pull new images and recreate
+  ${B}restart${R} [service] · ${B}down${R} · ${B}doctor${R} · ${B}version${R}
+
+EOF
+}
+
+cmd="${1:-help}"; shift || true
+case "$cmd" in
+  init) cmd_init "$@" ;;
+  up|start) cmd_up ;;
+  down|stop) cmd_down "$@" ;;
+  restart) cmd_restart "$@" ;;
+  status|ps) cmd_status ;;
+  logs) cmd_logs "$@" ;;
+  bootstrap) cmd_bootstrap ;;
+  export-indexers) cmd_export_indexers "$@" ;;
+  update) cmd_update ;;
+  urls) cmd_urls ;;
+  doctor) cmd_doctor ;;
+  version|-v|--version) say "galleon $VERSION" ;;
+  help|-h|--help) cmd_help ;;
+  *) cmd_help; die "unknown command: $cmd" ;;
+esac

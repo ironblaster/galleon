@@ -1,0 +1,12 @@
+# Every change needs a maintainer review. Sensitive paths are listed explicitly so
+# they stay protected even if the default rule is ever relaxed.
+*                       @ironblaster
+
+# Supply chain & automation: CI, workflows, ownership itself
+/.github/               @ironblaster
+# Code that runs with privileges on users' machines
+/galleon                @ironblaster
+/core/                  @ironblaster
+/compose*.yaml          @ironblaster
+# Presets decide which sites users connect to
+/presets/               @ironblaster

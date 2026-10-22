@@ -1,0 +1,8 @@
+# Hardware transcoding for Jellyfin (Intel QSV / AMD VAAPI). Enabled with GALLEON_GPU=true.
+# NVIDIA: see docs/configuration.md#hardware-transcoding
+services:
+  jellyfin:
+    devices:
+      - /dev/dri:/dev/dri
+    group_add:
+      - ${GALLEON_RENDER_GID:-109}

@@ -1,0 +1,13 @@
+[project]
+name = "galleon-core"
+version = "0.1.0"
+description = "Seeds and wires the Galleon media stack"
+requires-python = ">=3.11"
+dependencies = ["pyyaml==6.0.3"]
+
+[tool.ruff]
+line-length = 130
+target-version = "py311"
+
+[tool.ruff.lint]
+select = ["E", "F", "W", "B", "I", "UP"]

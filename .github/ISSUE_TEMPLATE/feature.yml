@@ -1,0 +1,8 @@
+name: ✨ Feature request
+description: Chart a new course
+labels: [enhancement]
+body:
+  - type: textarea
+    id: idea
+    attributes: { label: What should Galleon do?, description: Which service and which setting would it configure? }
+    validations: { required: true }

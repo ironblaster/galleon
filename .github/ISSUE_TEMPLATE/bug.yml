@@ -1,0 +1,18 @@
+name: 🐛 Bug report
+description: Something sank
+labels: [bug]
+body:
+  - type: textarea
+    id: what
+    attributes: { label: What happened?, description: What did you expect instead? }
+    validations: { required: true }
+  - type: textarea
+    id: bootstrap
+    attributes:
+      label: Bootstrap output
+      description: "`docker logs galleon` (it never prints secrets)"
+      render: text
+  - type: input
+    id: env
+    attributes: { label: Host, placeholder: "e.g. Ubuntu 24.04, Docker 27.3, compose 2.29, arm64" }
+    validations: { required: true }
