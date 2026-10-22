@@ -85,6 +85,18 @@ compose() {
   docker compose --env-file "$ENV_FILE" "${files[@]}" ${profiles[@]+"${profiles[@]}"} "$@"
 }
 
+# Registries rate-limit bursts of pulls (HTTP 429 "toomanyrequests"): back off and retry.
+pull_images() {
+  local attempt delay=20
+  for attempt in 1 2 3 4; do
+    if compose pull --ignore-buildable --quiet; then return 0; fi
+    [[ $attempt == 4 ]] && break
+    warn "image pull failed (attempt $attempt/4), retrying in ${delay}s…"
+    sleep "$delay"; delay=$((delay * 2))
+  done
+  die "could not pull images: check your connection or try again in a few minutes"
+}
+
 require_env() { [[ -f "$ENV_FILE" ]] || die "No .env yet: run ${B}./galleon init${R} first"; }
 
 # ── commands ───────────────────────────────────────────────────────────────
@@ -188,6 +200,7 @@ cmd_up() {
     die "GALLEON_VPN=true but VPN_SERVICE_PROVIDER is empty in .env"
   fi
   say "${B}Hoisting the sails…${R} ${DIM}(first run pulls ~3 GB of images)${R}"
+  pull_images
   compose up -d --build --remove-orphans
   say ""
   docker logs galleon-seed 2>&1 || true
@@ -209,7 +222,7 @@ cmd_logs()      { require_env; compose logs -f --tail 100 "$@"; }
 
 cmd_update() {
   require_env
-  compose pull --ignore-buildable
+  pull_images
   compose build --pull galleon
   compose up -d --remove-orphans
   ok "fleet updated"

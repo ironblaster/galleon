@@ -1,5 +1,9 @@
 # Changelog
 
+## Unreleased
+
+- `galleon up` / `update` retry image pulls with backoff when a registry rate-limits (`toomanyrequests`)
+
 ## 0.1.0 — maiden voyage
 
 - One-command install of Radarr, Sonarr, Prowlarr, qBittorrent, Jellyfin, Seerr, Unpackerr and FlareSolverr
