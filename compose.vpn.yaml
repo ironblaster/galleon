@@ -2,7 +2,7 @@
 # Provider settings: https://github.com/qdm12/gluetun-wiki
 services:
   gluetun:
-    image: qmcgaw/gluetun:v3
+    image: qmcgaw/gluetun:v3.41.3
     container_name: gluetun
     restart: unless-stopped
     networks: [fleet]
